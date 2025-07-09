@@ -1,0 +1,79 @@
+<!--
+Template d'écran de chargement pour GMod hébergé (GitHub Pages, Netlify, etc.)
+
+Structure de fichiers à placer à la racine du repo :
+  /index.html      ← ce fichier
+  /audio/          ← dossier audio
+     track1.mp3
+     track2.mp3
+     ...
+  /img/            ← dossier images
+     background1.jpg
+     background2.jpg
+     ...
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chargement...</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { overflow:hidden; font-family:sans-serif; color:#fff; }
+    #bg { position:fixed; top:0; left:0; width:100vw; height:100vh; object-fit:cover; z-index:-1; }
+    #overlay { position:absolute; top:0; left:0; width:100vw; height:100vh; background: rgba(0,0,0,0.5); }
+    #logo { position:absolute; top:20px; left:20px; width:200px; }
+    #loadingText { position:absolute; bottom:50px; width:100%; text-align:center; font-size:2em; }
+  </style>
+</head>
+<body>
+  <!-- Image de fond dynamique -->
+  <img id="bg" src="img/background1.jpg" alt="Fond">
+  <!-- Superposition sombre -->
+  <div id="overlay"></div>
+
+  <!-- Logo (optionnel) -->
+  <!--<img id="logo" src="img/logo.png" alt="Logo">-->
+
+  <div id="loadingText">Chargement du serveur...</div>
+
+  <!-- Playlist audio en boucle -->
+  <audio id="audioPlayer" autoplay loop></audio>
+
+  <script>
+    // Liste des musiques (mettez vos fichiers dans /audio/)
+    const tracks = [
+      'audio/track1.mp3',
+      'audio/track2.mp3',
+      // ajoutez autant que vous voulez
+    ];
+    // Liste des images de fond (mettez vos fichiers dans /img/)
+    const backgrounds = [
+      'img/background1.jpg',
+      'img/background2.jpg',
+      // ajoutez autant que vous voulez
+    ];
+
+    // Joueur audio
+    const audio = document.getElementById('audioPlayer');
+    let trackIndex = 0;
+    function nextTrack() {
+      trackIndex = (trackIndex + 1) % tracks.length;
+      audio.src = tracks[trackIndex];
+      audio.play();
+    }
+    // Initialisation
+    audio.src = tracks[0];
+    audio.addEventListener('ended', nextTrack);
+
+    // Rotation du fond toutes les X secondes
+    const img = document.getElementById('bg');
+    let bgIndex = 0;
+    setInterval(() => {
+      bgIndex = (bgIndex + 1) % backgrounds.length;
+      img.src = backgrounds[bgIndex];
+    }, 10000); // change toutes les 10s
+  </script>
+</body>
+</html>
