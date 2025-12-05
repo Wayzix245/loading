@@ -1,79 +1,356 @@
-<!--
-Template d'écran de chargement pour GMod hébergé (GitHub Pages, Netlify, etc.)
-
-Structure de fichiers à placer à la racine du repo :
-  /index.html      ← ce fichier
-  /audio/          ← dossier audio
-     track1.mp3
-     track2.mp3
-     ...
-  /img/            ← dossier images
-     background1.jpg
-     background2.jpg
-     ...
--->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chargement...</title>
+  <title>Mini-jeu éclair</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { overflow:hidden; font-family:sans-serif; color:#fff; }
-    #bg { position:fixed; top:0; left:0; width:100vw; height:100vh; object-fit:cover; z-index:-1; }
-    #overlay { position:absolute; top:0; left:0; width:100vw; height:100vh; background: rgba(0,0,0,0.5); }
-    #logo { position:absolute; top:20px; left:20px; width:200px; }
-    #loadingText { position:absolute; bottom:50px; width:100%; text-align:center; font-size:2em; }
+    :root {
+      --bg-start: #0f172a;
+      --bg-end: #1e293b;
+      --accent: #22d3ee;
+      --warning: #f97316;
+      --text: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 20% 20%, #1f2937, #0f172a 60%),
+                  radial-gradient(circle at 80% 0%, #111827, #0f172a 40%),
+                  linear-gradient(135deg, var(--bg-start), var(--bg-end));
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 24px;
+      overflow: hidden;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 2.5vw, 42px);
+      letter-spacing: -0.5px;
+      text-align: center;
+    }
+    p.subtitle {
+      margin: 4px 0 0;
+      opacity: 0.8;
+      text-align: center;
+      max-width: 640px;
+    }
+    .panel {
+      width: min(960px, 100%);
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+      border-radius: 16px;
+      padding: 16px 18px 18px;
+      backdrop-filter: blur(8px);
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-weight: 600;
+    }
+    .stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pill strong { color: var(--accent); }
+    button {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #0b1726;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(34, 197, 94, 0.35);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    button:hover { transform: translateY(-2px); }
+    button:active { transform: translateY(0); box-shadow: 0 4px 10px rgba(34,197,94,0.3); }
+    #gameWrapper {
+      position: relative;
+      width: 100%;
+      max-width: 960px;
+      height: 520px;
+      margin-top: 12px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: radial-gradient(circle at 50% 30%, rgba(34, 211, 238, 0.08), transparent 50%),
+                  radial-gradient(circle at 20% 80%, rgba(249, 115, 22, 0.1), transparent 50%),
+                  rgba(15, 23, 42, 0.85);
+    }
+    canvas { width: 100%; height: 100%; display: block; }
+    .hint {
+      text-align: center;
+      opacity: 0.8;
+      font-size: 14px;
+    }
+    .toast {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(12, 19, 31, 0.9);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--text);
+      font-weight: 700;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      text-align: center;
+      min-width: 220px;
+    }
+    .toast.visible { opacity: 1; }
   </style>
 </head>
 <body>
-  <!-- Image de fond dynamique -->
-  <img id="bg" src="img/background1.jpg" alt="Fond">
-  <!-- Superposition sombre -->
-  <div id="overlay"></div>
-
-  <!-- Logo (optionnel) -->
-  <!--<img id="logo" src="img/logo.png" alt="Logo">-->
-
-  <div id="loadingText">Chargement du serveur...</div>
-
-  <!-- Playlist audio en boucle -->
-  <audio id="audioPlayer" autoplay loop></audio>
+  <div class="panel">
+    <h1>Attrape-les tous !</h1>
+    <p class="subtitle">Déplace le curseur lumineux avec les flèches pour ramasser les orbes bleues avant la fin du temps, tout en évitant les zones oranges.</p>
+    <div class="topbar">
+      <div class="stats">
+        <div class="pill">Score : <strong id="score">0</strong></div>
+        <div class="pill">Temps : <strong id="time">30.0s</strong></div>
+        <div class="pill">Série : <strong id="streak">x1</strong></div>
+      </div>
+      <button id="startBtn">Lancer / Rejouer</button>
+    </div>
+    <div id="gameWrapper">
+      <canvas id="game" width="960" height="520" aria-label="Zone de jeu"></canvas>
+      <div id="toast" class="toast">Prêt ?</div>
+    </div>
+    <p class="hint">Touches directionnelles pour bouger • R pour recommencer • Les orbes bleues valent +10, les orbes bonus changent la série, les zones oranges retirent du temps !</p>
+  </div>
 
   <script>
-    // Liste des musiques (mettez vos fichiers dans /audio/)
-    const tracks = [
-      'audio/track1.mp3',
-      'audio/track2.mp3',
-      // ajoutez autant que vous voulez
-    ];
-    // Liste des images de fond (mettez vos fichiers dans /img/)
-    const backgrounds = [
-      'img/background1.jpg',
-      'img/background2.jpg',
-      // ajoutez autant que vous voulez
-    ];
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const timeEl = document.getElementById('time');
+    const streakEl = document.getElementById('streak');
+    const startBtn = document.getElementById('startBtn');
+    const toast = document.getElementById('toast');
 
-    // Joueur audio
-    const audio = document.getElementById('audioPlayer');
-    let trackIndex = 0;
-    function nextTrack() {
-      trackIndex = (trackIndex + 1) % tracks.length;
-      audio.src = tracks[trackIndex];
-      audio.play();
+    let player, orbs, hazards, bonuses, keys, running, timerId;
+    let lastTime = 0;
+    let remaining = 30;
+    let score = 0;
+    let streak = 1;
+
+    function reset() {
+      const padding = 40;
+      player = { x: canvas.width / 2, y: canvas.height / 2, r: 14, speed: 5 };
+      orbs = [];
+      hazards = [];
+      bonuses = [];
+      keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+      remaining = 30;
+      score = 0;
+      streak = 1;
+      running = true;
+      spawnInitial();
+      lastTime = performance.now();
+      updateHUD();
+      loop(lastTime);
+      clearInterval(timerId);
+      timerId = setInterval(() => {
+        remaining = Math.max(0, remaining - 0.1);
+        if (remaining <= 0) endGame();
+        updateHUD();
+      }, 100);
+      showToast('Go !');
     }
-    // Initialisation
-    audio.src = tracks[0];
-    audio.addEventListener('ended', nextTrack);
 
-    // Rotation du fond toutes les X secondes
-    const img = document.getElementById('bg');
-    let bgIndex = 0;
-    setInterval(() => {
-      bgIndex = (bgIndex + 1) % backgrounds.length;
-      img.src = backgrounds[bgIndex];
-    }, 10000); // change toutes les 10s
+    function spawnInitial() {
+      for (let i = 0; i < 6; i++) spawnOrb();
+      for (let i = 0; i < 3; i++) spawnHazard();
+      spawnBonus();
+    }
+
+    function spawnOrb() {
+      orbs.push({ x: rand(20, canvas.width - 20), y: rand(20, canvas.height - 20), r: 10, value: 10 });
+    }
+
+    function spawnHazard() {
+      hazards.push({ x: rand(40, canvas.width - 40), y: rand(40, canvas.height - 40), r: 22 });
+    }
+
+    function spawnBonus() {
+      bonuses.push({ x: rand(20, canvas.width - 20), y: rand(20, canvas.height - 20), r: 12, ttl: 7 });
+    }
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+
+    function loop(timestamp) {
+      if (!running) return;
+      const delta = (timestamp - lastTime) / 16.67; // normalize at 60fps
+      lastTime = timestamp;
+      update(delta);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function update(delta) {
+      const { ArrowUp, ArrowDown, ArrowLeft, ArrowRight } = keys;
+      if (ArrowUp) player.y -= player.speed * delta;
+      if (ArrowDown) player.y += player.speed * delta;
+      if (ArrowLeft) player.x -= player.speed * delta;
+      if (ArrowRight) player.x += player.speed * delta;
+      player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
+      player.y = Math.max(player.r, Math.min(canvas.height - player.r, player.y));
+
+      // Orbs collection
+      for (let i = orbs.length - 1; i >= 0; i--) {
+        if (distance(player, orbs[i]) < player.r + orbs[i].r) {
+          score += orbs[i].value * streak;
+          streak = Math.min(5, streak + 1);
+          orbs.splice(i, 1);
+          spawnOrb();
+          updateHUD();
+          showToast(`+${10 * streak} points !`);
+        }
+      }
+
+      // Hazards
+      for (const h of hazards) {
+        if (distance(player, h) < player.r + h.r) {
+          remaining = Math.max(0, remaining - 2.5);
+          streak = 1;
+          updateHUD();
+          showToast('-2.5s !', true);
+        }
+      }
+
+      // Bonuses
+      for (let i = bonuses.length - 1; i >= 0; i--) {
+        const b = bonuses[i];
+        b.ttl -= 1 / 60;
+        if (distance(player, b) < player.r + b.r) {
+          streak = Math.min(5, streak + 2);
+          remaining = Math.min(45, remaining + 3);
+          score += 20 * streak;
+          bonuses.splice(i, 1);
+          spawnBonus();
+          updateHUD();
+          showToast('Hyper boost !');
+          continue;
+        }
+        if (b.ttl <= 0) {
+          bonuses.splice(i, 1);
+          spawnBonus();
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Glow background
+      const grad = ctx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 240);
+      grad.addColorStop(0, 'rgba(34, 211, 238, 0.14)');
+      grad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Orbs
+      for (const o of orbs) {
+        ctx.beginPath();
+        ctx.fillStyle = '#22d3ee';
+        ctx.shadowColor = '#22d3ee';
+        ctx.shadowBlur = 12;
+        ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+
+      // Hazards
+      for (const h of hazards) {
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(249, 115, 22, 0.6)';
+        ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(248, 113, 22, 0.9)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // Bonuses
+      for (const b of bonuses) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([6, 4]);
+        ctx.arc(b.x, b.y, b.r + 4 * Math.sin(performance.now() / 200), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Player
+      ctx.beginPath();
+      ctx.fillStyle = '#a5f3fc';
+      ctx.shadowColor = '#67e8f9';
+      ctx.shadowBlur = 18;
+      ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    function updateHUD() {
+      scoreEl.textContent = score;
+      timeEl.textContent = `${remaining.toFixed(1)}s`;
+      streakEl.textContent = `x${streak}`;
+    }
+
+    function distance(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      return Math.hypot(dx, dy);
+    }
+
+    function endGame() {
+      running = false;
+      clearInterval(timerId);
+      showToast(`Terminé ! Score : ${score}`);
+    }
+
+    function showToast(text, danger = false) {
+      toast.textContent = text;
+      toast.style.borderColor = danger ? 'rgba(248, 113, 22, 0.6)' : 'rgba(34, 211, 238, 0.5)';
+      toast.style.color = danger ? '#fb923c' : '#e2e8f0';
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 700);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key in keys) keys[e.key] = true;
+      if (e.key === 'r' || e.key === 'R') reset();
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key in keys) keys[e.key] = false;
+    });
+
+    startBtn.addEventListener('click', reset);
+    showToast('Appuie sur Lancer !');
   </script>
 </body>
 </html>
